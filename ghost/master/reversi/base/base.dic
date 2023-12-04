@@ -313,7 +313,7 @@ Reversi.AI.exists {
 /**
  * CPUの思考処理
  *
- * @return array 指し手(x, y)の1次元配列
+ * @return array 指し手(x, y)に対応したindex, 評価値
  */
 Reversi.AI.think {
     _move   = IARRAY
