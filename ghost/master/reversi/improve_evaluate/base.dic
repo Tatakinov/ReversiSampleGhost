@@ -1,0 +1,159 @@
+/**
+ * モデルの重みとバイアスを1次元配列に読み込む
+ */
+Reversi.AI.ImproveEvaluate.initialize {
+    // 既にモデルを読み込んでいるなら飛ばす
+    if ARRAYSIZE(layer1) > 0 && ARRAYSIZE(layer2) > 0 && ARRAYSIZE(layer3) > 0 {
+        return
+    }
+
+    _   = FOPEN(C.model, 'r')
+    // linear(128->128)
+    layer1  = IARRAY
+    _w      = IARRAY
+    for _i = 0; _i < 128 * 128; _i++ {
+        _s  = FREAD(C.model)
+        _w  ,= TOREAL(_s)
+    }
+    for _i = 0; _i < 128; _i++ {
+        for _j = 0; _j < 128; _j++ {
+            layer1  ,= _w[_i * 128 + _j]
+        }
+        _s  = FREAD(C.model)
+        layer1  ,= TOREAL(_s)
+    }
+    // linear(128->64)
+    layer2  = IARRAY
+    _w      = IARRAY
+    for _i = 0; _i < 64 * 128; _i++ {
+        _s  = FREAD(C.model)
+        _w  ,= TOREAL(_s)
+    }
+    for _i = 0; _i < 64; _i++ {
+        for _j = 0; _j < 128; _j++ {
+            layer2  ,= _w[_i * 128 + _j]
+        }
+        _s  = FREAD(C.model)
+        layer2  ,= TOREAL(_s)
+    }
+    // linear(64->1)
+    layer3  = IARRAY
+    for _i = 0; _i < 64 + 1; _i++ {
+        _s  = FREAD(C.model)
+        layer3  ,= TOREAL(_s)
+    }
+    _   = FCLOSE(C.model)
+    LOGGING("load successful")
+}
+
+Reversi.AI.ImproveEvaluate.destroy {
+    ERASEVAR("layer1", "layer2", "layer3")
+}
+
+Reversi.AI.ImproveEvaluate.think {
+    _v  = Reversi.AI.ImproveEvaluate.NegaAlpha(C.depth)
+    _v
+    return
+}
+
+/**
+ * LeakyReLU関数
+ */
+Reversi.AI.ImproveEvaluate.LeakyReLU {
+    _x  = _argv[0]
+    if _x >= 0 {
+        _x
+    }
+    else {
+        0.01 * _x
+    }
+    return
+}
+
+/**
+ * tanhを使用したSigmoid関数
+ */
+Reversi.AI.ImproveEvaluate.Sigmoid {
+    _x  = _argv[0]
+    (TANH(_x / 2) + 1) / 2
+    return
+}
+
+/**
+ * 順方向伝播
+ */
+Reversi.AI.ImproveEvaluate.forward {
+    // layer1
+    _x  = _argv
+    // bias
+    _x  ,= 1
+    _y  = IARRAY
+    for _n = 0; _n < 128; _n++ {
+        _sum    = 0
+        for _m = 0; _m < 128 + 1; _m++ {
+            _sum    += layer1[_n * (128 + 1) + _m] * _x[_m]
+        }
+        _y  ,= _sum
+    }
+    _x  = _y
+    _y  = IARRAY
+    for _i = 0; _i < 128; _i++ {
+        _y  ,= Reversi.AI.ImproveEvaluate.LeakyReLU(_x[_i])
+    }
+    // layer2
+    _x  = _y
+    // bias
+    _x  ,= 1
+    _y  = IARRAY
+    for _n = 0; _n < 64; _n++ {
+        _sum    = 0
+        for _m = 0; _m < 128 + 1; _m++ {
+            _sum    += layer2[_n * (128 + 1) + _m] * _x[_m]
+        }
+        _y  ,= _sum
+    }
+    _x  = _y
+    _y  = IARRAY
+    for _i = 0; _i < 64; _i++ {
+        _y  ,= Reversi.AI.ImproveEvaluate.LeakyReLU(_x[_i])
+    }
+    // layer3
+    _x  = _y
+    // bias
+    _x  ,= 1
+    _y  = IARRAY
+    _sum    = 0
+    for _m = 0; _m < 64 + 1; _m++ {
+        _sum    += layer3[_m] * _x[_m]
+    }
+    _y  = _sum
+    _x  = _y
+    _y  = Reversi.AI.ImproveEvaluate.Sigmoid(_x)
+    _y
+    return
+}
+
+/**
+ * モデルによる評価値の計算
+ */
+Reversi.AI.ImproveEvaluate.evaluate {
+    _tensor = IARRAY
+    for _i = 0; _i < ARRAYSIZE(board); _i++ {
+        if board[_i] == 0 {
+            _tensor ,= 0
+            _tensor ,= 0
+        }
+        elseif board[_i] == color {
+            _tensor ,= 1
+            _tensor ,= 0
+        }
+        else {
+            _tensor ,= 0
+            _tensor ,= 1
+        }
+    }
+    _rate   = Reversi.AI.ImproveEvaluate.forward(_tensor)
+    _rate
+    return
+}
+

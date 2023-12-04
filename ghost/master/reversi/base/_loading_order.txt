@@ -1,0 +1,6 @@
+dic, const.dic, UTF-8
+dic, boot.dic, UTF-8
+dic, option.dic, UTF-8
+dic, base.dic, UTF-8
+dic, event.dic, UTF-8
+dic, record.dic, UTF-8

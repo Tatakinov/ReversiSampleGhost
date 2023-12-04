@@ -1,0 +1,100 @@
+
+Reversi.AI.ImproveSearch.AlphaBeta {
+    _depth  = _argv[0]
+    Reversi.AI.ImproveSearch.AlphaBeta.internal(_depth, -C.inf, C.inf)
+    return
+}
+
+Reversi.AI.ImproveSearch.AlphaBeta.internal {
+    _depth  = _argv[0]
+    _alpha  = _argv[1]
+    _beta   = _argv[2]
+
+    if Reversi.isGameOver {
+        _score  = Reversi.finalScore
+        _v  = IARRAY
+        if _score > 0 {
+            _v      = (C.null_move, C.inf - 1)
+        }
+        elseif _score < 0 {
+            _v      = (C.null_move, -(C.inf - 1))
+        }
+        else {
+            _v      = (C.null_move, 0)
+        }
+        _v
+        return
+    }
+
+    if _depth <= 0 {
+        _score  = Reversi.AI.BaseAI.evaluate
+        _v  = (C.null_move, _score)
+        // 後手番なら評価値を反転させる
+        _v[1]   *= color
+        _v
+        return
+    }
+
+    if Reversi.isPass() {
+        _v  = Reversi.AI.ImproveSearch.AlphaBeta.internal/
+            (_depth - 1, _alpha, _beta)
+        _v[0]   = C.null_move
+        _v
+        return
+    }
+
+    _move   = -1
+    _score  = 0
+
+    if color == 1 {
+        _score  = -C.inf
+    }
+    elseif color == -1 {
+        _score  = C.inf
+    }
+    foreach Reversi.generateMoves; _m {
+        _pos    = Reversi.toPos(_m)
+        _x      = _pos[0]
+        _y      = _pos[1]
+        // バックアップ
+        _board  = board
+        _color  = color
+        // 1手進める
+        _   = Reversi.reverse(_x, _y, 1)
+        color   = -color
+        // 1手進めた局面で再帰的にAlphaBeta法を行う
+        _v  = Reversi.AI.ImproveSearch.AlphaBeta.internal/
+            (_depth - 1, _alpha, _beta)
+        // 盤面を戻す
+        board   = _board
+        color   = _color
+
+        // 先後ともに、自分にとって良い手だったら_score,_moveを更新する
+        if color == 1 {
+            if _v[1] > _score {
+                _alpha  = _v[1]
+                _score  = _v[1]
+                _move   = _m
+                // 枝刈り
+                if _score >= _beta {
+                    break
+                }
+            }
+        }
+        elseif color == -1 {
+            if _v[1] < _score {
+                _beta   = _v[1]
+                _score  = _v[1]
+                _move   = _m
+                // 枝刈り
+                if _alpha >= _score {
+                    break
+                }
+            }
+        }
+    }
+    _v  = (_move, _score)
+    _v
+    return
+}
+

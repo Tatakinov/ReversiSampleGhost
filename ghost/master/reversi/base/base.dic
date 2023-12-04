@@ -1,0 +1,326 @@
+/**
+ * 初期化処理
+ */
+Reversi.initialize {
+    // 1は黒、-1は白
+    color   = 1
+    board   = (0, 0, 0, 0, 0, 0, 0, 0,/
+               0, 0, 0, 0, 0, 0, 0, 0,/
+               0, 0, 0, 0, 0, 0, 0, 0,/
+               0, 0, 0,-1, 1, 0, 0, 0,/
+               0, 0, 0, 1,-1, 0, 0, 0,/
+               0, 0, 0, 0, 0, 0, 0, 0,/
+               0, 0, 0, 0, 0, 0, 0, 0,/
+               0, 0, 0, 0, 0, 0, 0, 0)
+
+    foreach ('BaseAI', 'ImproveSearch', 'ImproveEvaluate'); _func_name {
+        _func_name  = "Reversi.AI.%(_func_name).initialize";
+        if ISFUNC(_func_name) {
+            EVAL(_func_name)
+        }
+    }
+}
+
+/**
+ * 描画処理
+ *
+ * @param[in] _collision 当たり判定の生成を行うかどうか
+ */
+Reversi.render {
+    _collision  = _argv[0]
+    _str    = '\0'
+    _moves  = IARRAY
+    if _collision {
+        _moves  = Reversi.generateMoves(color, board)
+    }
+    for _i = 0; _i < ARRAYSIZE(board); _i++ {
+        _pos    = Reversi.toPos(_i)
+        _x      = _pos[0]
+        _y      = _pos[1]
+        _parts  = ''
+        case board[_i] {
+            when 0 {
+                if ASEARCH(_i, _moves) > -1 {
+                    _parts  = 'COLLISION'
+                }
+            }
+            when 1 {
+                _parts  = 'BLACK'
+            }
+            when -1 {
+                _parts  = 'WHITE'
+            }
+        }
+        if _parts != '' {
+            _str    += "\![bind,%(_x)%(_y)_REVERSI,%(_parts),1]"
+        }
+        else {
+            _str    += "\![bind,%(_x)%(_y)_REVERSI,,0]"
+        }
+    }
+    _str
+    return
+}
+
+/**
+ * ゲームが終了したか調べる
+ *
+ * @return int ゲームが終了していたら1、それ以外は0
+ */
+Reversi.isGameOver {
+    _player_moves = Reversi.generateMoves
+    color   = -color
+    _opponent_moves   = Reversi.generateMoves
+    //手番を元に戻す
+    color   = -color
+    // 自分の手番でも相手の手番でも石を置くことができなければゲームオーバー
+    ARRAYSIZE(_player_moves) == 0 && ARRAYSIZE(_opponent_moves) == 0
+    return
+}
+
+/**
+ * 先手番から見た石差を返す
+ *
+ * @return int 石差。+なら先手勝ち、-なら後手勝ち、0なら引き分け。
+ */
+Reversi.finalScore {
+    _sum    = 0
+    foreach board; _e {
+        _sum    += _e
+    }
+    _sum
+    return
+}
+
+/**
+ * 現局面はパスするしかないか調べる
+ *
+ * @return int パスなら1、それ以外は0
+ */
+Reversi.isPass {
+    _moves = Reversi.generateMoves
+    // Reversi.isGameOverの後に呼ぶので自分がパスかどうか調べるだけで良い
+    ARRAYSIZE(_moves) == 0
+    return
+}
+
+/**
+ * 石を置けるか調べて_do_reverse次第で石を反転させる
+ *
+ * @param[in] _x 石を置いた場所のX座標
+ * @param[in] _y 石を置いた場所のY座標
+ * @param[in] _do_reverse 実際に石を反転させるかどうか
+ * @return int 8方向の内反転できた方向の数
+ */
+Reversi.reverse {
+    _x              = _argv[0]
+    _y              = _argv[1]
+    _do_reverse     = _argv[2]
+    _is_reversible     = Reversi.reverse.checkReversible(_x, _y, 0)
+    if _is_reversible && _do_reverse {
+        Reversi.reverse.checkReversible(_x, _y, _do_reverse)
+    }
+    _is_reversible
+    return
+}
+
+/**
+ * (x, y)を1次元配列に置けるindexに変換する
+ * @param[in] _x X座標
+ * @param[in] _y Y座標
+ * @return int 1次元配列のindex
+ */
+Reversi.toIndex {
+    _x  = _argv[0]
+    _y  = _argv[1]
+    _index  = (_y - 1) * 8 + (_x - 1)
+    _index
+    return
+}
+
+/**
+ * 1次元配列のindexを(x, y)へ変換する
+ *
+ * @param[in] _index 1次元配列のindex
+ * @return array (x, y)の1次元配列
+ */
+Reversi.toPos {
+    _index  = _argv[0]
+    _pos    = IARRAY
+    _x      = _index % 8
+    _y      = TOINT((_index - _x) / 8)
+    _pos    ,= _x + 1
+    _pos    ,= _y + 1
+    _pos
+    return
+}
+
+/**
+ * 石を置けるか調べる/石を反転させる(check機構無し)
+ *
+ * @param[in] _x 起点となるX座標
+ * @param[in] _y 起点となるY座標
+ * @param[in] _do_reverse 実際に石を置くかどうか
+ * @return int 8方向の内反転できた方向の数
+ */
+Reversi.reverse.checkReversible {
+    _x              = _argv[0]
+    _y              = _argv[1]
+    _do_reverse     = _argv[2]
+    _index          = Reversi.toIndex(_x, _y)
+
+    // すでに石が置かれていたら何もせずreturn
+    if board[_index] != 0 {
+        0
+        return
+    }
+
+    if _do_reverse {
+        // 着手
+        board[_index]  = color
+    }
+
+    // 石を裏返せたかどうか
+    _reverse    = 0
+
+    // 8方向すべてについて処理を行う
+    _reverse    += Reversi.reverse.checkReversibleInSingleDirection/
+        (_x + 1, _y    , 0, 0, _do_reverse)
+    _reverse    += Reversi.reverse.checkReversibleInSingleDirection/
+        (_x + 1, _y + 1, 1, 0, _do_reverse)
+    _reverse    += Reversi.reverse.checkReversibleInSingleDirection/
+        (_x    , _y + 1, 2, 0, _do_reverse)
+    _reverse    += Reversi.reverse.checkReversibleInSingleDirection/
+        (_x - 1, _y + 1, 3, 0, _do_reverse)
+    _reverse    += Reversi.reverse.checkReversibleInSingleDirection/
+        (_x - 1, _y    , 4, 0, _do_reverse)
+    _reverse    += Reversi.reverse.checkReversibleInSingleDirection/
+        (_x - 1, _y - 1, 5, 0, _do_reverse)
+    _reverse    += Reversi.reverse.checkReversibleInSingleDirection/
+        (_x    , _y - 1, 6, 0, _do_reverse)
+    _reverse    += Reversi.reverse.checkReversibleInSingleDirection/
+        (_x + 1, _y - 1, 7, 0, _do_reverse)
+    _reverse
+    return
+}
+
+/**
+ * (x, y)の石を特定の方向に反転出来るか調べる
+ *
+ * @param[in] _x X座標
+ * @param[in] _y Y座標
+ * @param[in] _direct 反転処理を連鎖させる方向
+ * @param[in] _is_reversible 既に反転させた石があるか
+ * @param[in] _do_reverse 実際に反転させるか
+ * @return bool direct方向の石の反転が出来るかどうか
+ */
+Reversi.reverse.checkReversibleInSingleDirection {
+    _x              = _argv[0]
+    _y              = _argv[1]
+    _direct         = _argv[2]
+    _is_reversible  = _argv[3]
+    _do_reverse     = _argv[4]
+    _index          = Reversi.toIndex(_x, _y)
+
+    if _x < 1 || _x > 8 || _y < 1 || _y > 8 {
+        C.false
+    }
+    elseif board[_index] == color {
+        _is_reversible
+    }
+    elseif board[_index] == -color {
+        // _direct方向に1マス移動する
+        case _direct {
+            when 0 {
+                _x  += 1
+            }
+            when 1 {
+                _x  += 1
+                _y  += 1
+            }
+            when 2 {
+                _y  += 1
+            }
+            when 3 {
+                _x  -= 1
+                _y  += 1
+            }
+            when 4 {
+                _x  -= 1
+            }
+            when 5 {
+                _x  -= 1
+                _y  -= 1
+            }
+            when 6 {
+                _y  -= 1
+            }
+            when 7 {
+                _x  += 1
+                _y  -= 1
+            }
+        }
+        _is_reversible  = Reversi.reverse.checkReversibleInSingleDirection/
+            (_x, _y, _direct, C.true, _do_reverse)
+        if _is_reversible && _do_reverse {
+            board[_index]   = color
+        }
+        _is_reversible
+    }
+    else {
+        C.false
+    }
+    return
+}
+
+/**
+ * 指し手生成
+ *
+ * @return array 石を置ける座標を1次元配列のindexに変換したものの配列
+ */
+Reversi.generateMoves {
+    _moves  = IARRAY
+    for _x = 1; _x <= 8; _x++ {
+        for _y = 1; _y <= 8; _y++ {
+            _index          = Reversi.toIndex(_x, _y)
+            if Reversi.reverse(_x, _y, C.false) {
+                _moves  ,= _index
+            }
+        }
+    }
+    _moves
+    return
+}
+
+/**
+ * CPUの思考部分が存在するか調べる
+ *
+ * @param[in] reference[0] 特定の思考処理の関数名
+ * @return int reference[0]で指定された関数が存在すれば1、reference[0]がnullなら思考処理が存在すればその関数名
+ */
+Reversi.AI.exists {
+    foreach ('ImproveEvaluate', 'ImproveSearch', 'BaseAI'); _func_name {
+        _func_name  = "Reversi.AI.%(_func_name).think"
+        if ISFUNC(_func_name) {
+            _func_name
+            return
+        }
+    }
+    0
+    return
+}
+
+/**
+ * CPUの思考処理
+ *
+ * @return array 指し手(x, y)の1次元配列
+ */
+Reversi.AI.think {
+    _move   = IARRAY
+    _func_name  = Reversi.AI.exists
+    if _func_name {
+        EVAL("_move = %(_func_name)")
+    }
+    _move
+    return
+}

@@ -1,0 +1,138 @@
+/**
+ * ゲーム開始時のイベント
+ */
+OnReversiStart {
+    Reversi.initialize
+    // 先手後手の決定
+    case Option.player_color {
+        // 先手
+        when 0 {
+            player_color = 1
+        }
+        // 後手
+        when 1 {
+            player_color = -1
+        }
+        // ランダム
+        when 2 {
+            player_color = RAND(2) * 2 - 1
+        }
+    }
+    '\![raise,OnReversiTurnBegin]'
+    return
+}
+
+/**
+ * ターン開始時のイベント
+ */
+OnReversiTurnBegin {
+    Reversi.render
+    --
+    if Reversi.isGameOver {
+        '\![raise,OnReversiGameOver]'
+        return
+    }
+    if Reversi.isPass {
+        '\![raise,OnReversiTurnEnd]'
+        return
+    }
+    // AIが存在しなければ両方の手番をプレイヤーが行う
+    if color == player_color || ! Reversi.AI.exists {
+        '\![raise,OnReversiPlayerTurn]'
+    }
+    elseif color == -player_color {
+        '\![raise,OnReversiAITurn]'
+    }
+    return
+}
+
+/**
+ * ゲーム終了時のイベント
+ */
+OnReversiGameOver {
+    _sum    = Reversi.finalScore
+    // 黒石を+、白石を-でカウントしている
+    // それにプレイヤーの手番(1 or -1)を掛ければ
+    // プレイヤーから見た石差になる
+    if _sum * player_color > 0 {
+        '\0ユーザの勝ち！'
+    }
+    elseif _sum == 0 {
+        '\0引き分け'
+    }
+    else {
+        '\0ユーザの負け...'
+    }
+    return
+}
+
+/**
+ * ターン終了時に呼び出されるイベント
+ */
+OnReversiTurnEnd {
+    // 手番を入れ替える
+    color   = -color
+    '\![raise,OnReversiTurnBegin]'
+    return
+}
+
+/**
+ * 石を置く/反転する時に呼ばれるイベント
+ */
+OnReversiReverse {
+    _x  = TOINT(reference[0])
+    _y  = TOINT(reference[1])
+    _   = Reversi.reverse(_x, _y, C.true)
+    Reversi.render
+    --
+    '\![raise,OnReversiTurnEnd]'
+    return
+}
+
+/**
+ * プレイヤーのターンの時に呼ばれるイベント
+ */
+OnReversiPlayerTurn {
+    _str    = Reversi.render(C.true)
+    _str
+    return
+}
+
+/**
+ * 石を置けるマスをクリックした時に呼ばれるイベント
+ */
+OnMouseClick {
+    if reference[5] == '0' && /
+            RE_MATCH(reference[4], '[1-8][1-8]_REVERSI_COLLISION') {
+        _n  = TOINT(reference[4])
+        _y  = _n % 10
+        _x  = TOINT((_n - _y) / 10)
+        "\![raise,OnReversiReverse,%(_x),%(_y)]"
+    }
+}
+
+/**
+ * CPUのターンに呼ばれるイベント
+ */
+OnReversiAITurn {
+    // ここにユーザの指し手への反応を入れる
+    ""
+    --
+    '\![raise,OnReversiAIThink]'
+}
+
+/**
+ * CPUの思考を行うイベント
+ */
+OnReversiAIThink {
+    _v      = Reversi.AI.think
+    _move   = _v[0]
+    _pos    = Reversi.toPos(_move)
+    _x      = _pos[0]
+    _y      = _pos[1]
+    // ここに自分の指し手への反応を入れる
+    ""
+    --
+    "\![raise,OnReversiReverse,%(_x),%(_y)]"
+    return
+}

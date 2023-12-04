@@ -1,0 +1,11 @@
+dicdir, base
+
+# 以下の3つは
+# 3つ全部無効
+# base_aiのみ有効
+# base_ai, improve_searchが有効
+# improve_evaluateが有効
+# のいずれかにすること
+#dicdir, base_ai
+#dicdir, improve_search
+dicdir, improve_evaluate

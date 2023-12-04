@@ -1,0 +1,13 @@
+charset,UTF-8
+readme.charset,UTF-8
+
+type,ghost
+name,ReversiSampleGhost
+
+sakura.name,Board
+kero.name,None
+
+craftman,tatakinov
+craftmanw,タタキノフ
+
+shiori,yaya.dll

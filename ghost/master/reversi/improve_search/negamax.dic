@@ -1,0 +1,66 @@
+
+Reversi.AI.ImproveSearch.NegaMax {
+    _depth  = _argv[0]
+
+    if Reversi.isGameOver {
+        _score  = Reversi.finalScore
+        _v  = IARRAY
+        if _score > 0 {
+            _v      = (C.null_move, color * (C.inf - 1))
+        }
+        elseif _score < 0 {
+            _v      = (C.null_move, -color * (C.inf - 1))
+        }
+        else {
+            _v      = (C.null_move, 0)
+        }
+        _v
+        return
+    }
+
+    if _depth <= 0 {
+        _score  = Reversi.AI.BaseAI.evaluate
+        _v  = (C.null_move, _score)
+        _v
+        return
+    }
+
+    if Reversi.isPass() {
+        _v  = Reversi.AI.ImproveSearch.NegaMax(_depth - 1)
+        _v[0]   = C.null_move
+        _v[1]   = -_v[1]
+        _v
+        return
+    }
+
+    _move   = -1
+    _score  = -C.inf
+
+    foreach Reversi.generateMoves; _m {
+        _pos    = Reversi.toPos(_m)
+        _x      = _pos[0]
+        _y      = _pos[1]
+        // バックアップ
+        _board  = board
+        _color  = color
+        // 1手進める
+        _   = Reversi.reverse(_x, _y, 1)
+        color   = -color
+        // 1手進めた局面で再帰的にNegaMax法を行う
+        _v  = Reversi.AI.ImproveSearch.NegaMax(_depth - 1)
+        _v[1]   = -_v[1]
+        // 盤面を戻す
+        board   = _board
+        color   = _color
+
+        // 先後ともに、自分にとって良い手だったら_score,_moveを更新する
+        if _v[1] > _score {
+            _score  = _v[1]
+            _move   = _m
+        }
+    }
+    _v  = (_move, _score)
+    _v
+    return
+}
+

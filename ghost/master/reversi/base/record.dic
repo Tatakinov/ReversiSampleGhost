@@ -1,0 +1,66 @@
+Reversi.Learn.Record {
+    'record.txt'
+}
+
+OnReversiLearn {
+    game_max    = 10
+    game        = 1
+    record      = IARRAY
+    Reversi.initialize
+    _   = FOPEN(Reversi.Learn.Record, 'w')
+    '\![raise,OnReversiLearnStart]'
+    return
+}
+
+OnReversiLearnStart {
+    if game > game_max {
+        '\![raise,OnReversiLearnEnd]'
+        return
+    }
+    _board  = board
+    _color  = color
+    depth   = 1
+    while ! Reversi.isGameOver {
+        if Reversi.isPass() {
+            color   = -color
+            continue
+        }
+        _v      = Reversi.AI.think
+        _s  = ''
+        for _i = 0; _i < 64; _i++ {
+            if board[_i] == 0 {
+                _s  += '00'
+            }
+            elseif board[_i] == color {
+                _s  += '10'
+            }
+            else {
+                _s  += '01'
+            }
+        }
+        _s  += TOSTR(_v[1])
+        if ASEARCH(_s, record) == -1 {
+            record  ,= _s
+            _   = FWRITE(Reversi.Learn.Record, _s)
+        }
+        _move   = _v[0]
+        if RAND % 16 == 0 {
+            _move   = ANY(Reversi.generateMoves)
+        }
+        _pos    = Reversi.toPos(_move)
+        _x      = _pos[0]
+        _y      = _pos[1]
+        _   = Reversi.reverse(_x, _y, 1)
+        color   = -color
+    }
+    game    += 1
+    board   = _board
+    color   = _color
+    "%(game)ゲーム終了。\![timerraise,1,1,OnReversiLearnStart]"
+    return
+}
+
+OnReversiLearnEnd {
+    _   = FCLOSE(Reversi.Learn.Record)
+    '\0棋譜の書き出し終了'
+}

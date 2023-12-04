@@ -1,0 +1,6 @@
+dic, const.dic, UTF-8
+dic, base.dic, UTF-8
+dic, minimax.dic, UTF-8
+dic, negamax.dic, UTF-8
+dic, alphabeta.dic, UTF-8
+dic, negaalpha.dic, UTF-8

@@ -1,0 +1,80 @@
+
+Reversi.AI.ImproveSearch.MiniMax {
+    _depth  = _argv[0]
+
+    if Reversi.isGameOver {
+        _score  = Reversi.finalScore
+        _v  = IARRAY
+        if _score > 0 {
+            _v      = (C.null_move, C.inf - 1)
+        }
+        elseif _score < 0 {
+            _v      = (C.null_move, -(C.inf - 1))
+        }
+        else {
+            _v      = (C.null_move, 0)
+        }
+        _v
+        return
+    }
+
+    if _depth <= 0 {
+        _score  = Reversi.AI.BaseAI.evaluate
+        _v  = (C.null_move, _score)
+        // 後手番なら評価値を反転させる
+        _v[1]   *= color
+        _v
+        return
+    }
+
+    if Reversi.isPass() {
+        _v  = Reversi.AI.ImproveSearch.MiniMax(_depth - 1)
+        _v[0]   = C.null_move
+        _v
+        return
+    }
+
+    _move   = -1
+    _score  = 0
+
+    if color == 1 {
+        _score  = -C.inf
+    }
+    elseif color == -1 {
+        _score  = C.inf
+    }
+    foreach Reversi.generateMoves; _m {
+        _pos    = Reversi.toPos(_m)
+        _x      = _pos[0]
+        _y      = _pos[1]
+        // バックアップ
+        _board  = board
+        _color  = color
+        // 1手進める
+        _   = Reversi.reverse(_x, _y, 1)
+        color   = -color
+        // 1手進めた局面で再帰的にMiniMax法を行う
+        _v  = Reversi.AI.ImproveSearch.MiniMax(_depth - 1)
+        // 盤面を戻す
+        board   = _board
+        color   = _color
+
+        // 先後ともに、自分にとって良い手だったら_score,_moveを更新する
+        if color == 1 {
+            if _v[1] > _score {
+                _score  = _v[1]
+                _move   = _m
+            }
+        }
+        elseif color == -1 {
+            if _v[1] < _score {
+                _score  = _v[1]
+                _move   = _m
+            }
+        }
+    }
+    _v  = (_move, _score)
+    _v
+    return
+}
+

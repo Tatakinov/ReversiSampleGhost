@@ -1,0 +1,16 @@
+Reversi.AI.ImproveSearch.initialize {
+}
+
+Reversi.AI.ImproveSearch.think {
+    _v  = IARRAY
+    foreach ('NegaAlpha', 'AlphaBeta', 'NegaMax', 'MiniMax'); _func_name {
+        _func_name  = "Reversi.AI.ImproveSearch.%(_func_name)"
+        if ISFUNC(_func_name) {
+            EVAL("_v = %(_func_name)(%(C.depth))")
+            break
+        }
+    }
+    _v
+    return
+}
+

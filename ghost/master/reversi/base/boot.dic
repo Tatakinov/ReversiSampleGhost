@@ -1,0 +1,37 @@
+
+OnFirstBoot {
+    Option.player_color = 0
+    '\0\s[0]'
+}
+
+OnBoot {
+    '\0\s[0]'
+}
+
+OnMouseDoubleClick {
+    '\0\_qSキー: ゲーム開始\nOキー: 設定\n\_q'
+}
+
+OnKeyPress {
+    case reference[0] {
+        when 's' {
+            '\0Loading...\![raise,OnReversiStart]'
+        }
+        when 'l' {
+            '\![raise,OnReversiLearn]'
+        }
+        when 'o' {
+            '\![raise,OnReversiOptionMenu]'
+        }
+    }
+}
+
+OnDestroy {
+    ERASEVAR("board", "color", "player_color");
+    foreach ('ImproveEvaluate', 'ImproveSearch', 'BaseAI'); _func_name {
+        _func_name  = "Reversi.AI.%(_func_name).destroy"
+        if ISFUNC(_func_name) {
+            EVAL(_func_name)
+        }
+    }
+}

@@ -1,0 +1,55 @@
+Reversi.AI.BaseAI.initialize {
+}
+
+Reversi.AI.BaseAI.destroy {
+}
+
+/**
+ * 手番から見た評価値を返す
+ */
+Reversi.AI.BaseAI.evaluate {
+    _score  = 0
+    for _i = 0; _i < ARRAYSIZE(board); _i++ {
+        _score  += board[_i] * C.point[_i]
+    }
+    color * _score
+    return
+}
+
+/**
+ * 一手先の局面の評価が一番良い指し手を返す
+ *
+ * @return array 最善手の(x, y)の配列
+ */
+Reversi.AI.BaseAI.think {
+    _score  = -C.inf
+    _move   = C.null_move
+    _moves  = Reversi.generateMoves
+    foreach _moves; _m {
+        // バックアップ
+        _board  = board
+        _color  = color
+        // 一手進める
+        _pos    = Reversi.toPos(_m)
+        _x      = _pos[0]
+        _y      = _pos[1]
+        _       = Reversi.reverse(_x, _y, 1)
+        color   = -color
+        // 返ってくるのは相手番から見た評価値なので
+        // 反転して自分側から見た評価値にする
+        _e      = -Reversi.AI.BaseAI.evaluate
+        // 盤面を元に戻す
+        board   = _board
+        color   = _color
+
+        // 今までの手より良い手だったら更新する
+        if _e > _score {
+            _score  = _e
+            _move   = _m
+        }
+    }
+    _v  = (_move, _score)
+    _v
+    return
+}
+

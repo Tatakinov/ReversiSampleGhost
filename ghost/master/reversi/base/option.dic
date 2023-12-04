@@ -1,0 +1,28 @@
+OnReversiOptionMenu {
+    _key    = reference[0]
+    case _key {
+        when 'color' {
+            Option.player_color = (Option.player_color + 1) % 3
+        }
+    }
+    _str    = '\0\_q\![*]ユーザの手番:\_l[120,]'
+    case Option.player_color {
+        when 0 {
+            _str    += '先手'
+        }
+        when 1 {
+            _str    += '後手'
+        }
+        when 2 {
+            _str    += 'ランダム'
+        }
+    }
+    _str    += '\_l[200,]\q[【変更】,OnReversiOptionMenu,color]\n'
+    _str    += '\n\q[閉じる,OnReversiCloseOptionMenu]\_q'
+    _str
+    return
+}
+
+OnReversiCloseOptionMenu {
+    return
+}

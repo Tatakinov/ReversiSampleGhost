@@ -1,0 +1,3 @@
+dic, const.dic, UTF-8
+dic, base.dic, UTF-8
+dic, negaalpha.dic, UTF-8

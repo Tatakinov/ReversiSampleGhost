@@ -1,0 +1,131 @@
+Reversi.AI.ImproveEvaluate.NegaAlpha {
+    _depth  = _argv[0]
+    _v  = Reversi.AI.ImproveEvaluate.NegaAlpha.internal(_depth, C.alpha, C.beta, C.true)
+    _v
+    return
+}
+
+/**
+ * 指し手にランダム性を持たせたNegaAlpha
+ *
+ * @param _depth 探索深さ
+ * @param _alpha alpha
+ * @param _beta beta
+ * @param _is_root 探索木の一番上かどうか
+ * @return (指し手, スコア)の配列
+ */
+Reversi.AI.ImproveEvaluate.NegaAlpha.internal {
+    _depth  = _argv[0]
+    _alpha  = _argv[1]
+    _beta   = _argv[2]
+    _is_root    = _argv[3]
+
+    if Reversi.isGameOver {
+        _score  = color * Reversi.finalScore
+        _v  = IARRAY
+        if _score > 0 {
+            _v      = (C.null_move, C.win)
+        }
+        elseif _score < 0 {
+            _v      = (C.null_move, C.lose)
+        }
+        else {
+            _v      = (C.null_move, C.draw)
+        }
+        _v
+        return
+    }
+
+    if _depth <= 0 {
+        _score  = Reversi.AI.ImproveEvaluate.evaluate
+        _v  = (C.null_move, _score)
+        _v
+        return
+    }
+
+    if Reversi.isPass() {
+        _board  = board
+        _color  = color
+        color   = -color
+        // 勝率(0<r<1)なので-_beta, -_alphaではなく1 - _beta, 1 - _alpha
+        _v  = Reversi.AI.ImproveEvaluate.NegaAlpha.internal/
+            (_depth - 1, 1 - _beta, 1 - _alpha, C.false)
+        board   = _board
+        color   = _color
+        _v[0]   = C.null_move
+        // 勝率を反転させるので-_v[1]ではなく1 - _v[1]
+        _v[1]   = 1 - _v[1]
+        _v
+        return
+    }
+
+    // TODO comment
+    _move   = -1
+    // TODO comment
+    _score  = -0.001
+    _moves  = IARRAY
+    _scores = IARRAY
+
+    foreach Reversi.generateMoves; _m {
+        _pos    = Reversi.toPos(_m)
+        _x      = _pos[0]
+        _y      = _pos[1]
+        _board  = board
+        _color  = color
+        _   = Reversi.reverse(_x, _y, 1)
+        color   = -color
+        // 1手進めた局面で再帰的にNegaAlpha法を行う
+        _v  = Reversi.AI.ImproveEvaluate.NegaAlpha.internal/
+            (_depth - 1, 1 - _beta, 1 - _alpha, C.false)
+        _v[1]   = 1 - _v[1]
+        board   = _board
+        color   = _color
+
+        if _is_root {
+            _moves  ,= _m
+            _scores ,= _v[1]
+        }
+
+        // 先後ともに、自分にとって良い手だったら_score,_moveを更新する
+        if _v[1] > _score {
+            _alpha  = _v[1]
+            _score  = _v[1]
+            _move   = _m
+            if _score >= _beta {
+                break
+            }
+        }
+    }
+    // 毎回同じ手を指さないように勝率の16乗をもとに乱数で指し手を選ぶ
+    if _is_root {
+        _random_choice_factor   = IARRAY
+        _sum    = 0
+        foreach _scores; _s {
+            _factor = _s * _s
+            _factor = _factor * _factor
+            _factor = _factor * _factor
+            _factor = _factor * _factor
+            _random_choice_factor   ,= _factor
+            _sum    += _factor
+        }
+        if _sum > 0 {
+            // 正規化
+            for _i = 0; _i < ARRAYSIZE(_random_choice_factor); _i++ {
+                _random_choice_factor[_i]   /= _sum
+            }
+        }
+        _r  = (RAND(C.rand_max) / C.rand_max)
+        for _i = 0; _i < ARRAYSIZE(_random_choice_factor); _i++ {
+            _r  -= _random_choice_factor[_i]
+            if _r < 0 {
+                _v  = (_moves[_i], _scores[_i])
+                _v
+                return
+            }
+        }
+    }
+    _v  = (_move, _score)
+    _v
+    return
+}
+

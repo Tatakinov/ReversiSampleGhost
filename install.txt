@@ -1,0 +1,6 @@
+charset,UTF-8
+
+type,ghost
+name,ReversiSampleGhost
+directory,ReversiSampleGhost
+
